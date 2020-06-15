@@ -78,20 +78,24 @@ def getMeetingMetaData(xmlFile ,metaXmlPath , internalID ):
             usersList.append(textNode.data);
             userName=textNode.data
             
-            
             name  = event.getElementsByTagName("externalUserId")[0];
             textNode  = name.childNodes[0];
             externalUserId=textNode.data
             
             name  = event.getElementsByTagName("userId")[0];
             textNode  = name.childNodes[0];
-            userMap[textNode.data]=userName,externalUserId
+            pollResObj = {}
+            pollResObj['name'] = userName
+            pollResObj['userID'] = externalUserId
+            
+            userMap[textNode.data]=pollResObj
             
         elif (event.getAttribute("eventname") == 'PollStartedRecordEvent'):
             newPoll = {}
             name  = event.getElementsByTagName("answers")[0];
             textNode  = name.childNodes[0];
-            newPoll["pollOptions"] = textNode.data
+            print(textNode.data)
+            newPoll["pollOptions"] =    json.loads(textNode.data) #textNode.data
             
             name  = event.getElementsByTagName("timestampUTC")[0];
             textNode  = name.childNodes[0];
@@ -102,7 +106,7 @@ def getMeetingMetaData(xmlFile ,metaXmlPath , internalID ):
             textNode  = name.childNodes[0];
             newPoll["pollId"] = textNode.data
             
-            newPoll["pollResponses"] = []
+            #newPoll["pollResponses"] = []
             poll[textNode.data] = newPoll
             
         elif (event.getAttribute("eventname") == 'UserRespondedToPollRecordEvent'):
@@ -120,12 +124,23 @@ def getMeetingMetaData(xmlFile ,metaXmlPath , internalID ):
             
             name  = event.getElementsByTagName("userId")[0];
             textNode  = name.childNodes[0];
-            userName  = userMap.get(textNode.data)
+            userData  = userMap.get(textNode.data)
+            userData['responseTime'] = responseTime
             
             if poolID in poll:
                newPoll = poll[poolID]
-               d = {"name":userName , "optionId":optionID , "responseTime":responseTime}
-               newPoll.get("pollResponses").append(d)
+               if 'pollResponses' in newPoll:
+                   pollResponses = newPoll.get('pollResponses');
+                   if optionID in pollResponses:
+                      responses =  pollResponses[optionID]
+                      responses.append(userData)
+                   else: 
+                      pollResponses[optionID] = [userData]  
+               else:
+                   pollResponses = {}
+                   pollResponses[optionID] = [userData]
+                   newPoll['pollResponses'] = pollResponses
+                    
                 
     resposneDict['participantsList'] = usersList;
     resposneDict['polls'] =list(poll.values())
